@@ -42,6 +42,8 @@ export const deployRequestSchema = z
 /** Chat request validation */
 export const chatRequestSchema = z.object({
     model: modelNameSchema,
+    mode: z.enum(['cpu', 'gpu']).optional().default('cpu'),
+    apiUrl: z.string().optional(),
     message: z.string().min(1, 'Message cannot be empty'),
     conversationHistory: z
         .array(

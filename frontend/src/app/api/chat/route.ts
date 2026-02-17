@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const { model, message, conversationHistory } = parsed.data
+        const { model, message, conversationHistory, mode, apiUrl } = parsed.data
 
         // Build messages array
         const messages = [
@@ -26,34 +26,59 @@ export async function POST(req: NextRequest) {
             { role: 'user' as const, content: message },
         ]
 
-        // Stream response from Ollama
-        const ollamaRes = await fetch(OLLAMA_API.chat, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model,
-                messages,
-                stream: true,
-            }),
-        })
+        let responseStream: ReadableStream
+        let type: 'ollama' | 'vllm' = 'ollama'
 
-        if (!ollamaRes.ok) {
-            const text = await ollamaRes.text().catch(() => 'Unknown error')
-            return NextResponse.json(
-                { success: false, error: `Ollama error: ${text}` },
-                { status: ollamaRes.status },
-            )
+        if (mode === 'gpu' && apiUrl) {
+            type = 'vllm'
+            // vLLM (OpenAI compatible)
+            const vllmRes = await fetch(`${apiUrl}/v1/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer empty', // vLLM usually doesn't need a real key locally
+                },
+                body: JSON.stringify({
+                    model,
+                    messages,
+                    stream: true,
+                }),
+            })
+
+            if (!vllmRes.ok) {
+                const text = await vllmRes.text().catch(() => 'Unknown error')
+                return NextResponse.json(
+                    { success: false, error: `vLLM error: ${text}` },
+                    { status: vllmRes.status },
+                )
+            }
+            if (!vllmRes.body) throw new Error('No response body from vLLM')
+            responseStream = vllmRes.body
+        } else {
+            // Ollama (default)
+            const ollamaRes = await fetch(OLLAMA_API.chat, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model,
+                    messages,
+                    stream: true,
+                }),
+            })
+
+            if (!ollamaRes.ok) {
+                const text = await ollamaRes.text().catch(() => 'Unknown error')
+                return NextResponse.json(
+                    { success: false, error: `Ollama error: ${text}` },
+                    { status: ollamaRes.status },
+                )
+            }
+            if (!ollamaRes.body) throw new Error('No response body from Ollama')
+            responseStream = ollamaRes.body
         }
 
-        if (!ollamaRes.body) {
-            return NextResponse.json(
-                { success: false, error: 'No response body from Ollama' },
-                { status: 500 },
-            )
-        }
-
-        // Proxy the stream from Ollama to the client
-        const reader = ollamaRes.body.getReader()
+        // Proxy the stream to the client
+        const reader = responseStream.getReader()
         const encoder = new TextEncoder()
         const decoder = new TextDecoder()
 
@@ -69,15 +94,43 @@ export async function POST(req: NextRequest) {
 
                         for (const line of lines) {
                             try {
-                                const chunk = JSON.parse(line)
-                                controller.enqueue(
-                                    encoder.encode(
-                                        `data: ${JSON.stringify({
-                                            content: chunk.message?.content || '',
-                                            done: chunk.done || false,
-                                        })}\n\n`,
-                                    ),
-                                )
+                                if (type === 'ollama') {
+                                    const chunk = JSON.parse(line)
+                                    controller.enqueue(
+                                        encoder.encode(
+                                            `data: ${JSON.stringify({
+                                                content: chunk.message?.content || '',
+                                                done: chunk.done || false,
+                                            })}\n\n`,
+                                        ),
+                                    )
+                                } else {
+                                    // vLLM / OpenAI format: data: {...}
+                                    if (line.startsWith('data: ')) {
+                                        const dataStr = line.slice(6)
+                                        if (dataStr === '[DONE]') {
+                                            controller.enqueue(
+                                                encoder.encode(
+                                                    `data: ${JSON.stringify({
+                                                        content: '',
+                                                        done: true,
+                                                    })}\n\n`,
+                                                ),
+                                            )
+                                            continue
+                                        }
+                                        const chunk = JSON.parse(dataStr)
+                                        const content = chunk.choices?.[0]?.delta?.content || ''
+                                        controller.enqueue(
+                                            encoder.encode(
+                                                `data: ${JSON.stringify({
+                                                    content,
+                                                    done: false,
+                                                })}\n\n`,
+                                            ),
+                                        )
+                                    }
+                                }
                             } catch {
                                 // Skip malformed JSON
                             }
