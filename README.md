@@ -25,6 +25,76 @@ This repository contains scripts to:
 ./deploy_model.sh meta-llama/Llama-3.2-1B-Instruct 1
 ```
 
+### 🖥️ CPU Deployment (No GPU Required)
+
+```bash
+# Auto-detects system, picks best quantization, deploys via Ollama
+./deploy_cpu.sh meta-llama/Llama-3.2-3B-Instruct
+
+# Run in background mode
+./deploy_cpu.sh Qwen/Qwen2.5-7B-Instruct --background
+```
+
+| OS | Support |
+|----|---------|
+| macOS (Apple Silicon) | ✅ Metal acceleration |
+| macOS (Intel) | ✅ CPU |
+| Linux | ✅ Full |
+| Windows (WSL) | ✅ Via WSL |
+
+**Features**: Auto system detection → Smart quantization selection → RAM warnings → Ollama deployment → API testing
+
+---
+
+## 📜 deploy_cpu.sh
+
+**Location**: `./deploy_cpu.sh`
+
+### How It Works
+
+```
+Input: HuggingFace repo name
+  ↓
+1. Detect system (OS, CPU, RAM, cores)
+  ↓
+2. Install/start Ollama (if needed)
+  ↓
+3. Parse model & detect parameter count
+  ↓
+4. Pick best GGUF quantization for your RAM
+  ↓
+5. Show recommendation table (✅/⚠️/❌)
+  ↓
+6. Warn if model is too heavy for system
+  ↓
+7. Deploy: ollama pull hf.co/{repo}:{quant}
+  ↓
+8. Test API endpoint
+  ↓
+Success! Interactive chat or background server
+```
+
+### Quantization Reference
+
+| Quant | GB/B Params | Quality | 7B Model RAM |
+|-------|-------------|---------|--------------|
+| Q2_K | 0.40 | Low | ~3.8 GB |
+| Q3_K_M | 0.50 | Medium-Low | ~4.5 GB |
+| Q4_K_M | 0.60 | Medium ★ | ~5.2 GB |
+| Q5_K_M | 0.75 | Medium-High | ~6.2 GB |
+| Q6_K | 0.85 | High | ~7.0 GB |
+| Q8_0 | 1.10 | Highest | ~8.7 GB |
+
+### Warning Thresholds
+
+| RAM Usage | Action |
+|-----------|--------|
+| ≤ 40% | ✅ Silent, proceed |
+| 40–60% | ℹ️ Info + confirm |
+| 60–80% | ⚠️ Warning + confirm |
+| 80–95% | 🚨 Strong warning + type CONFIRM |
+| > 95% | ❌ Refused, suggests lighter models |
+
 ---
 
 ## 📜 deploy_model.sh
