@@ -1,15 +1,47 @@
 # vLLM Self-Hosting Scripts
 
-Collection of automation scripts for deploying and managing LLM models with vLLM inference server.
+Collection of automation scripts and a **web dashboard** for deploying and managing LLM models with Ollama (CPU) and vLLM (GPU).
 
 ## 📁 Overview
 
-This repository contains scripts to:
+This repository contains:
+- **Web Dashboard** — Full-featured Next.js UI for managing deployments, models, and chat
+- **Shell Scripts** — Automated deployment for CPU (Ollama) and GPU (vLLM)
 - Download models from HuggingFace
 - Deploy to single GPU with automatic configuration
 - Run multiple parallel agents for scaling
 - Manage systemd services
 - Auto-configure LiteLLM and nginx
+
+---
+
+## 🖥️ Web Dashboard
+
+A complete management UI built with **Next.js 14 + shadcn/ui + TypeScript**.
+
+### Quick Start
+
+```bash
+# One-command setup (installs deps + starts dev server)
+chmod +x setup.sh && ./setup.sh
+
+# Or manually
+cd frontend && npm install && npm run dev
+```
+
+Open **http://localhost:3000** in your browser.
+
+### Features
+
+| Page | Description |
+|------|-------------|
+| **Dashboard** | Live stats — models deployed, running, RAM usage, activity log |
+| **Deploy** | Deploy via CPU (Ollama) or GPU (vLLM) with real-time progress streaming |
+| **Models** | Table with start/stop/delete, API endpoints, status indicators |
+| **Chat** | Interactive chat with streaming responses, conversation history |
+| **System** | Hardware info, Ollama & vLLM health checks, memory charts |
+
+📖 **Full documentation**: See [`frontend/README.md`](frontend/README.md)
 
 ---
 
