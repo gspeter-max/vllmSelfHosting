@@ -71,23 +71,68 @@ async function detectGpu(): Promise<{
     utilization: number
     temperature: number
 } | null> {
+    const platform = os.platform()
+
+    // 1. macOS (Apple Silicon / Metal / AMD)
+    if (platform === 'darwin') {
+        try {
+            // Get GPU info
+            const spOutput = await runCommand('system_profiler SPDisplaysDataType -json')
+            const spData = JSON.parse(spOutput)
+            const gpus = spData.SPDisplaysDataType || []
+
+            // Find the best GPU (Prefer AMD/Apple Silicon over Intel)
+            const bestGpu = gpus.find((g: any) => {
+                const model = (g.sppci_model || '').toLowerCase()
+                return model.includes('amd') || model.includes('radeon') || model.includes('apple')
+            }) || gpus[0]
+
+            if (bestGpu) {
+                // If VRAM is "4 GB", parse it. If "1536 MB", parse it.
+                // spdisplays_vram: "4 GB"
+                let vramTotal = 0
+                const vramStr = bestGpu.spdisplays_vram || bestGpu.spdisplays_vram_shared || ''
+                if (vramStr) {
+                    const parts = vramStr.split(' ')
+                    const val = parseFloat(parts[0])
+                    if (parts[1] === 'GB') vramTotal = val * 1024
+                    else if (parts[1] === 'MB') vramTotal = val
+                }
+
+                return {
+                    name: bestGpu.sppci_model || 'Unknown GPU',
+                    vramTotalMB: vramTotal,
+                    vramUsedMB: 0, // Hard to get without sudo
+                    vramFreeMB: 0,
+                    utilization: 0,
+                    temperature: 0,
+                }
+            }
+        } catch {
+            // Fallback
+        }
+    }
+
+    // 2. NVIDIA (Linux / Windows)
     const csv = await runCommand(
         'nvidia-smi --query-gpu=name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu --format=csv,noheader,nounits',
     )
-    if (!csv) return null
-
-    // Parse first GPU line: "NVIDIA GeForce RTX 3090, 24576, 1234, 23342, 15, 42"
-    const parts = csv.split('\n')[0]?.split(',').map((s) => s.trim())
-    if (!parts || parts.length < 6) return null
-
-    return {
-        name: parts[0],
-        vramTotalMB: parseFloat(parts[1]) || 0,
-        vramUsedMB: parseFloat(parts[2]) || 0,
-        vramFreeMB: parseFloat(parts[3]) || 0,
-        utilization: parseFloat(parts[4]) || 0,
-        temperature: parseFloat(parts[5]) || 0,
+    if (csv) {
+        // Parse first GPU line: "NVIDIA GeForce RTX 3090, 24576, 1234, 23342, 15, 42"
+        const parts = csv.split('\n')[0]?.split(',').map((s) => s.trim())
+        if (parts && parts.length >= 6) {
+            return {
+                name: parts[0],
+                vramTotalMB: parseFloat(parts[1]) || 0,
+                vramUsedMB: parseFloat(parts[2]) || 0,
+                vramFreeMB: parseFloat(parts[3]) || 0,
+                utilization: parseFloat(parts[4]) || 0,
+                temperature: parseFloat(parts[5]) || 0,
+            }
+        }
     }
+
+    return null
 }
 
 async function getVllmKvCache(): Promise<number | null> {
