@@ -175,3 +175,31 @@ export interface QuantizationOption {
     recommended: boolean
     minRam: number
 }
+
+// ============================================================
+// HuggingFace model lookup types
+// ============================================================
+
+export interface HFGgufFile {
+    filename: string
+    quantization: string
+    sizeBytes: number
+    bits: number
+}
+
+export interface HFModelInfo {
+    id: string
+    author: string
+    pipeline: string
+    architecture: string | null
+    parameters: number | null
+    parametersFormatted: string | null
+    contextLength: number | null
+    license: string | null
+    downloads: number
+    likes: number
+    lastModified: string
+    tags: string[]
+    hasGguf: boolean
+    ggufFiles: HFGgufFile[]
+}
