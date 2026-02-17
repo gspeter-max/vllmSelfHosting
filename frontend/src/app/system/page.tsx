@@ -8,7 +8,7 @@ import type { HealthStatus } from '@/lib/types'
 import { getHealthStatus } from '@/lib/api'
 
 export default function SystemPage() {
-    const { data: systemInfo, isLoading: systemLoading } = useSystemInfo()
+    const { data: systemInfo, isLoading: systemLoading, history } = useSystemInfo()
     const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null)
     const [healthLoading, setHealthLoading] = useState(true)
 
@@ -35,7 +35,7 @@ export default function SystemPage() {
                     System Information
                 </h2>
                 <p className="text-muted-foreground">
-                    Hardware details and service health
+                    Hardware details, service health, and live resource monitoring
                 </p>
             </div>
 
@@ -45,7 +45,11 @@ export default function SystemPage() {
                 isLoading={systemLoading || healthLoading}
             />
 
-            <ResourceChart systemInfo={systemInfo} isLoading={systemLoading} />
+            <ResourceChart
+                systemInfo={systemInfo}
+                isLoading={systemLoading}
+                history={history}
+            />
         </div>
     )
 }

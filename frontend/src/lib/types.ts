@@ -102,12 +102,22 @@ export interface Conversation {
 // System types
 // ============================================================
 
+export interface GpuInfo {
+    name: string
+    vramTotalMB: number
+    vramUsedMB: number
+    vramFreeMB: number
+    utilization: number
+    temperature: number
+}
+
 export interface SystemInfo {
     os: string
     osVersion?: string
     arch: string
     cpu: string
     cpuCores: number
+    cpuLoad: number
     ramTotal: string
     ramTotalBytes: number
     ramAvailable: string
@@ -115,6 +125,8 @@ export interface SystemInfo {
     ramUsed: string
     ramUsedBytes: number
     hostname?: string
+    gpu: GpuInfo | null
+    vllmKvCachePercent: number | null
 }
 
 export interface HealthStatus {

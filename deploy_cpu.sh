@@ -112,6 +112,10 @@ parse_args() {
                 RUN_MODE="background"
                 shift
                 ;;
+            --quant)
+                FORCE_QUANT="$2"
+                shift 2
+                ;;
             --help|-h)
                 usage
                 ;;
@@ -937,6 +941,13 @@ main() {
     echo -e "${BLUE}── Phase 4: Quantization Selection ──${NC}"
     BEST_QUANT=$(pick_best_quant "$PARAM_BILLIONS" "$RAM_BUDGET_GB")
     RAM_NEEDED=$(calc_ram "$PARAM_BILLIONS" "$BEST_QUANT")
+
+    # Override with user-selected quantization if provided
+    if [[ -n "$FORCE_QUANT" ]]; then
+        BEST_QUANT="$FORCE_QUANT"
+        RAM_NEEDED=$(calc_ram "$PARAM_BILLIONS" "$BEST_QUANT")
+        echo -e "${BLUE}Using user-selected quantization: ${BOLD}${BEST_QUANT}${NC}"
+    fi
 
     echo -e "  Best quantization: ${BOLD}${BEST_QUANT}${NC}"
     echo -e "  Estimated RAM:     ${RAM_NEEDED}GB / ${RAM_BUDGET_GB}GB budget"

@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import { useDeploy } from '@/hooks/use-deploy'
 import { addActivityEvent } from '@/components/dashboard/activity-log'
+import { DeployTerminal } from '@/components/deploy/deploy-terminal'
+import { PromptDialog } from '@/components/deploy/prompt-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Switch } from '@/components/ui/switch'
 import {
     Select,
     SelectContent,
@@ -17,7 +19,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Cpu, Zap, Rocket, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { Cpu, Zap, Rocket, XCircle, Loader2 } from 'lucide-react'
 import { QUANTIZATION_OPTIONS } from '@/lib/constants'
 import type { DeployMode } from '@/lib/types'
 
@@ -25,7 +27,9 @@ export default function DeployPage() {
     const [mode, setMode] = useState<DeployMode>('cpu')
     const [model, setModel] = useState('')
     const [gpuSlot, setGpuSlot] = useState<string>('0')
-    const { status, logs, error, deploy, reset } = useDeploy()
+    const [selectedQuant, setSelectedQuant] = useState('Q4_K_M')
+    const [autoSelect, setAutoSelect] = useState(false)
+    const { status, logs, error, pendingPrompt, deploy, sendInput, dismissPrompt, reset } = useDeploy()
 
     const handleDeploy = async () => {
         if (!model.trim()) return
@@ -33,6 +37,7 @@ export default function DeployPage() {
         await deploy({
             mode,
             model: model.trim(),
+            quantization: mode === 'cpu' && !autoSelect ? selectedQuant : undefined,
             gpuSlot: mode === 'gpu' ? (parseInt(gpuSlot) as 0 | 1) : undefined,
         })
 
@@ -90,51 +95,91 @@ export default function DeployPage() {
                                     value={model}
                                     onChange={(e) => setModel(e.target.value)}
                                     disabled={isDeploying}
+                                    data-testid="model-input"
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    Enter the HuggingFace repository name. The script will auto-select the best quantization.
+                                    Enter the HuggingFace repository name.
                                 </p>
                             </div>
 
-                            {/* Quantization reference table */}
+                            {/* Quantization selector */}
                             <div>
-                                <h4 className="text-sm font-medium mb-2">
-                                    Quantization Reference
-                                </h4>
-                                <div className="rounded-lg border">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b bg-muted/50">
-                                                <th className="p-2 text-left font-medium">Quant</th>
-                                                <th className="p-2 text-left font-medium">Bits</th>
-                                                <th className="p-2 text-left font-medium">Size</th>
-                                                <th className="p-2 text-left font-medium">Description</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {QUANTIZATION_OPTIONS.map((q) => (
-                                                <tr
-                                                    key={q.name}
-                                                    className={`border-b last:border-0 ${q.recommended ? 'bg-primary/5' : ''
-                                                        }`}
-                                                >
-                                                    <td className="p-2 font-mono text-xs">
-                                                        {q.name}
-                                                        {q.recommended && (
-                                                            <Badge variant="default" className="ml-2 text-[10px]">
-                                                                Recommended
-                                                            </Badge>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-sm font-medium">
+                                        Quantization
+                                    </h4>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <span className="text-xs text-muted-foreground">
+                                            Auto-select
+                                        </span>
+                                        <Switch
+                                            checked={autoSelect}
+                                            onCheckedChange={setAutoSelect}
+                                            data-testid="auto-select-toggle"
+                                        />
+                                    </label>
+                                </div>
+                                <div
+                                    className={`rounded-lg border transition-opacity ${autoSelect ? 'opacity-50 pointer-events-none' : ''
+                                        }`}
+                                    data-testid="quant-table"
+                                >
+                                    {/* Header */}
+                                    <div className="grid grid-cols-[2rem_1fr_4rem_5rem_1fr] gap-2 p-2 border-b bg-muted/50 text-xs font-medium text-muted-foreground">
+                                        <span />
+                                        <span>Quant</span>
+                                        <span>Bits</span>
+                                        <span>Size</span>
+                                        <span>Description</span>
+                                    </div>
+                                    {/* Rows */}
+                                    {QUANTIZATION_OPTIONS.map((q) => {
+                                        const isSelected = selectedQuant === q.name
+                                        return (
+                                            <div
+                                                key={q.name}
+                                                onClick={() => setSelectedQuant(q.name)}
+                                                className={`grid grid-cols-[2rem_1fr_4rem_5rem_1fr] gap-2 p-2 cursor-pointer transition-colors border-b last:border-0
+                                                    ${isSelected
+                                                        ? 'ring-2 ring-primary bg-primary/10'
+                                                        : 'hover:bg-muted/80'
+                                                    }
+                                                    ${q.recommended ? 'bg-primary/5' : ''}
+                                                `}
+                                                data-testid={`quant-row-${q.name}`}
+                                                role="radio"
+                                                aria-checked={isSelected}
+                                            >
+                                                {/* Radio dot */}
+                                                <div className="flex items-center justify-center">
+                                                    <div
+                                                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center
+                                                            ${isSelected
+                                                                ? 'border-primary'
+                                                                : 'border-muted-foreground/40'
+                                                            }`}
+                                                    >
+                                                        {isSelected && (
+                                                            <div className="w-2 h-2 rounded-full bg-primary" />
                                                         )}
-                                                    </td>
-                                                    <td className="p-2">{q.bits}</td>
-                                                    <td className="p-2">{q.size}</td>
-                                                    <td className="p-2 text-muted-foreground">
-                                                        {q.description}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                                    </div>
+                                                </div>
+                                                <span className="font-mono text-xs flex items-center gap-2">
+                                                    {q.name}
+                                                    {q.recommended && (
+                                                        <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                                                            Recommended
+                                                        </Badge>
+                                                    )}
+                                                </span>
+                                                <span className="text-sm">{q.bits}</span>
+                                                <span className="text-sm">{q.size}</span>
+                                                <span className="text-sm text-muted-foreground">
+                                                    {q.description}
+                                                </span>
+                                            </div>
+                                        )
+                                    })}
                                 </div>
                             </div>
                         </CardContent>
@@ -190,6 +235,7 @@ export default function DeployPage() {
                     onClick={handleDeploy}
                     disabled={!model.trim() || isDeploying}
                     className="min-w-[140px]"
+                    data-testid="deploy-btn"
                 >
                     {isDeploying ? (
                         <>
@@ -218,54 +264,21 @@ export default function DeployPage() {
                 </Alert>
             )}
 
-            {/* Deploy Progress */}
+            {/* Deploy Terminal */}
             {logs.length > 0 && (
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Deployment Progress
-                        </CardTitle>
-                        <Badge
-                            variant={
-                                isComplete ? 'default' : isFailed ? 'destructive' : 'secondary'
-                            }
-                        >
-                            {isComplete ? (
-                                <span className="flex items-center gap-1">
-                                    <CheckCircle className="h-3 w-3" /> Complete
-                                </span>
-                            ) : isFailed ? (
-                                <span className="flex items-center gap-1">
-                                    <XCircle className="h-3 w-3" /> Failed
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1">
-                                    <Loader2 className="h-3 w-3 animate-spin" /> Running
-                                </span>
-                            )}
-                        </Badge>
-                    </CardHeader>
-                    <CardContent>
-                        <ScrollArea className="h-[400px]">
-                            <div className="font-mono text-xs space-y-0.5 p-3 bg-muted/50 rounded-lg">
-                                {logs.map((log, i) => (
-                                    <div
-                                        key={i}
-                                        className={`${log.type === 'error'
-                                            ? 'text-destructive'
-                                            : log.type === 'complete'
-                                                ? 'text-green-500 font-bold'
-                                                : 'text-foreground'
-                                            }`}
-                                    >
-                                        {log.data}
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
+                <DeployTerminal
+                    logs={logs}
+                    status={status}
+                    modelName={model}
+                />
             )}
+
+            {/* Interactive Prompt Dialog */}
+            <PromptDialog
+                prompt={pendingPrompt}
+                onSend={sendInput}
+                onDismiss={dismissPrompt}
+            />
         </div>
     )
 }

@@ -8,6 +8,7 @@ const mockSystemInfo: SystemInfo = {
     arch: 'x64',
     cpu: 'Intel Core i7-9750H',
     cpuCores: 12,
+    cpuLoad: 25,
     ramTotal: '16.0 GB',
     ramTotalBytes: 17179869184,
     ramAvailable: '8.0 GB',
@@ -15,6 +16,8 @@ const mockSystemInfo: SystemInfo = {
     ramUsed: '8.0 GB',
     ramUsedBytes: 8589934592,
     hostname: 'test-mac',
+    gpu: null,
+    vllmKvCachePercent: null,
 }
 
 const mockHealthStatus: HealthStatus = {
@@ -34,7 +37,7 @@ describe('SystemOverview', () => {
 
         expect(screen.getByText('macOS 14.0')).toBeInTheDocument()
         expect(screen.getByText('Intel Core i7-9750H')).toBeInTheDocument()
-        expect(screen.getByText('12 cores')).toBeInTheDocument()
+        expect(screen.getByText(/12 cores/)).toBeInTheDocument()
         expect(screen.getByText('16.0 GB')).toBeInTheDocument()
     })
 

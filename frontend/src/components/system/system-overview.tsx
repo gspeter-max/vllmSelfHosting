@@ -6,6 +6,7 @@ import {
     MemoryStick,
     HardDrive,
     Server,
+    Zap,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -64,13 +65,21 @@ export function SystemOverview({
             title: 'CPU',
             icon: Cpu,
             value: systemInfo.cpu,
-            detail: `${systemInfo.cpuCores} cores`,
+            detail: `${systemInfo.cpuCores} cores · Load: ${systemInfo.cpuLoad ?? 0}%`,
         },
         {
             title: 'Memory',
             icon: MemoryStick,
             value: systemInfo.ramTotal,
             detail: `Available: ${systemInfo.ramAvailable} · Used: ${systemInfo.ramUsed}`,
+        },
+        {
+            title: 'GPU',
+            icon: Zap,
+            value: systemInfo.gpu ? systemInfo.gpu.name : 'No GPU Detected',
+            detail: systemInfo.gpu
+                ? `VRAM: ${(systemInfo.gpu.vramUsedMB / 1024).toFixed(1)}/${(systemInfo.gpu.vramTotalMB / 1024).toFixed(1)} GB · ${systemInfo.gpu.utilization}% util · ${systemInfo.gpu.temperature}°C`
+                : 'nvidia-smi not available',
         },
         {
             title: 'Hostname',
