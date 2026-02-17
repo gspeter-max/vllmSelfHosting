@@ -154,11 +154,17 @@ export default function ChatPage() {
         scrollToBottom()
 
         try {
+            const currentModel = models.find((m) => m.name === selectedModel)
+            const mode = currentModel?.type || 'cpu' // Default to cpu if not found
+            const apiUrl = currentModel?.apiUrl
+
             const res = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: selectedModel,
+                    mode,
+                    apiUrl,
                     message: input.trim(),
                     conversationHistory: convo.messages,
                 }),
@@ -246,8 +252,8 @@ export default function ChatPage() {
                             <div
                                 key={convo.id}
                                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm cursor-pointer group transition-colors ${activeConvoId === convo.id
-                                        ? 'bg-accent text-accent-foreground'
-                                        : 'hover:bg-muted'
+                                    ? 'bg-accent text-accent-foreground'
+                                    : 'hover:bg-muted'
                                     }`}
                                 onClick={() => {
                                     setActiveConvoId(convo.id)
@@ -331,8 +337,8 @@ export default function ChatPage() {
                                             )}
                                             <div
                                                 className={`rounded-lg px-4 py-2.5 max-w-[70%] text-sm whitespace-pre-wrap ${msg.role === 'user'
-                                                        ? 'bg-primary text-primary-foreground'
-                                                        : 'bg-muted'
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-muted'
                                                     }`}
                                             >
                                                 {msg.content}

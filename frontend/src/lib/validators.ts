@@ -25,7 +25,7 @@ export const deployRequestSchema = z
             message: 'Mode must be "cpu" or "gpu"',
         }),
         model: modelNameSchema,
-        quantization: z.string().optional(),
+        quantization: z.enum(['Q2_K', 'Q3_K_M', 'Q4_0', 'Q4_K_M', 'Q5_K_M', 'Q6_K', 'Q8_0']).optional(),
         runMode: z.enum(['background', 'foreground']).optional().default('background'),
         gpuSlot: z.union([z.literal(0), z.literal(1)]).optional(),
     })
@@ -42,6 +42,8 @@ export const deployRequestSchema = z
 /** Chat request validation */
 export const chatRequestSchema = z.object({
     model: modelNameSchema,
+    mode: z.enum(['cpu', 'gpu']).optional().default('cpu'),
+    apiUrl: z.string().optional(),
     message: z.string().min(1, 'Message cannot be empty'),
     conversationHistory: z
         .array(

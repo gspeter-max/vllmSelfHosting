@@ -29,6 +29,7 @@ export const getVllmBaseUrl = (gpuSlot: number): string =>
 export const API_ROUTES = {
     deploy: '/api/deploy',
     deployStream: '/api/deploy/stream',
+    deployStdin: '/api/deploy/stdin',
     models: '/api/models',
     model: (name: string) => `/api/models/${encodeURIComponent(name)}`,
     modelStart: (name: string) => `/api/models/${encodeURIComponent(name)}/start`,
@@ -51,12 +52,13 @@ export const NAV_ITEMS = [
 export const POLL_INTERVAL = {
     models: 10000,
     health: 15000,
-    system: 30000,
+    system: 2000,
 } as const
 
 /** Quantization options for CPU deployment */
 export const QUANTIZATION_OPTIONS = [
     { name: 'Q2_K', bits: 2, size: '~2GB', description: 'Smallest, lowest quality', recommended: false, minRam: 4 },
+    { name: 'Q3_K_M', bits: 3, size: '~3GB', description: 'Medium-low quality', recommended: false, minRam: 5 },
     { name: 'Q4_0', bits: 4, size: '~4GB', description: 'Small, decent quality', recommended: false, minRam: 6 },
     { name: 'Q4_K_M', bits: 4, size: '~4.5GB', description: 'Balanced quality and size', recommended: true, minRam: 8 },
     { name: 'Q5_K_M', bits: 5, size: '~5.5GB', description: 'Good quality', recommended: false, minRam: 10 },

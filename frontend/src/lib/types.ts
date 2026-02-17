@@ -102,12 +102,22 @@ export interface Conversation {
 // System types
 // ============================================================
 
+export interface GpuInfo {
+    name: string
+    vramTotalMB: number
+    vramUsedMB: number
+    vramFreeMB: number
+    utilization: number
+    temperature: number
+}
+
 export interface SystemInfo {
     os: string
     osVersion?: string
     arch: string
     cpu: string
     cpuCores: number
+    cpuLoad: number
     ramTotal: string
     ramTotalBytes: number
     ramAvailable: string
@@ -115,6 +125,8 @@ export interface SystemInfo {
     ramUsed: string
     ramUsedBytes: number
     hostname?: string
+    gpu: GpuInfo | null
+    vllmKvCachePercent: number | null
 }
 
 export interface HealthStatus {
@@ -162,4 +174,32 @@ export interface QuantizationOption {
     description: string
     recommended: boolean
     minRam: number
+}
+
+// ============================================================
+// HuggingFace model lookup types
+// ============================================================
+
+export interface HFGgufFile {
+    filename: string
+    quantization: string
+    sizeBytes: number
+    bits: number
+}
+
+export interface HFModelInfo {
+    id: string
+    author: string
+    pipeline: string
+    architecture: string | null
+    parameters: number | null
+    parametersFormatted: string | null
+    contextLength: number | null
+    license: string | null
+    downloads: number
+    likes: number
+    lastModified: string
+    tags: string[]
+    hasGguf: boolean
+    ggufFiles: HFGgufFile[]
 }

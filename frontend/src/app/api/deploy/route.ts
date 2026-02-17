@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const { mode, model, runMode, gpuSlot } = parsed.data
+        const { mode, model, runMode, gpuSlot, quantization } = parsed.data
 
         // Check for concurrent deployments
         const activeDeployment = Array.from(deployments.values()).find(
@@ -56,6 +56,9 @@ export async function POST(req: NextRequest) {
                 model,
                 `--${runMode || 'background'}`,
             ]
+            if (quantization) {
+                args.push('--quant', quantization)
+            }
         } else {
             command = 'bash'
             args = [
