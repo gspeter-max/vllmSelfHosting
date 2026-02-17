@@ -1,0 +1,17 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Session files
+session_information.md
+
+# Environment
+.env
+.env.local
+
+# Node (handled by frontend/.gitignore too)
+node_modules/
